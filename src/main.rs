@@ -6,7 +6,7 @@ struct DeviceState {
     pressure_ma: f32,
     generator_v: f32,
     battery_v: f32,
-    regulator_output_v: f32
+    // regulator_output_v: f32
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
@@ -22,8 +22,8 @@ enum DeviceMessage {
     ToDevice(DeviceControl),
 }
 
-use rumqttd::{Broker, Config, Notification};
 use csv::Writer;
+use rumqttd::{Broker, Config, Notification};
 use std::thread;
 
 fn main() {
@@ -56,14 +56,16 @@ fn main() {
 
         match notification {
             Notification::Forward(forward) => {
-                let message: DeviceMessage = serde_json::from_slice(&forward.publish.payload).unwrap();
-                wtr.serialize(&message).unwrap();
-                wtr.flush().unwrap();
-                println!(
-                    "Topic = {:?}, Payload = {:?}",
-                    forward.publish.topic,
-                    message
-                );
+                let message: DeviceMessage =
+                    serde_json::from_slice(&forward.publish.payload).unwrap();
+                match message {
+                    DeviceMessage::ToCloud(v) => {
+                        wtr.serialize(&v).unwrap();
+                        wtr.flush().unwrap();
+                        println!("Topic = {:?}, Payload = {:?}", forward.publish.topic, v);
+                    }
+                    _ => {}
+                };
             }
             v => {
                 println!("{v:?}");
