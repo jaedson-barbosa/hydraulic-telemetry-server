@@ -2,11 +2,12 @@
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 struct DeviceState {
-    n_pulses: u32,
-    pressure_ma: f32,
-    generator_v: f32,
-    battery_v: f32,
-    // regulator_output_v: f32
+    n_pulses: u16,
+    pressure_mv: u16,
+    a0: u16,
+    a1: u16,
+    a2: u16,
+    a3: u16,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
