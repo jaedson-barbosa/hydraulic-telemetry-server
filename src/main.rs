@@ -18,7 +18,7 @@ use tower_http::services::ServeDir;
 
 async fn serve_dir() {
     let app = Router::new().nest_service("/", ServeDir::new("./"));
-    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 80));
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 8080));
 
     if let Err(v) = axum::Server::bind(&addr)
         .serve(app.into_make_service())
