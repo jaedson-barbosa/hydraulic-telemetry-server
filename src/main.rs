@@ -3,31 +3,33 @@
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
 struct DeviceState {
     n_pulses: u16,
+    generator_mv: u16,
+    battery_mv: u16,
     pressure_mv: u16,
-    a0: u16,
-    a1: u16,
-    a2: u16,
-    a3: u16,
+    pressure_en: bool,
+    buck_dc: u8,
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-struct DeviceControl {
-    enable_charger: bool,
-    enable_pressure: bool,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
-#[serde(rename_all = "snake_case", untagged)]
-enum DeviceMessage {
-    ToCloud(DeviceState),
-    ToDevice(DeviceControl),
-}
-
+use axum::Router;
 use csv::Writer;
 use rumqttd::{Broker, Config, Notification};
 use std::thread;
+use tower_http::services::ServeDir;
 
-fn main() {
+async fn serve_dir() {
+    let app = Router::new().nest_service("/", ServeDir::new("./"));
+    let addr = std::net::SocketAddr::from(([0, 0, 0, 0], 80));
+
+    if let Err(v) = axum::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await
+    {
+        println!("Error {v:?}")
+    }
+}
+
+#[tokio::main]
+async fn main() {
     // As examples are compiled as seperate binary so this config is current path dependent. Run it
     // from root of this crate
     let config = config::Config::builder()
@@ -37,6 +39,7 @@ fn main() {
 
     let config: Config = config.try_deserialize().unwrap();
 
+    tokio::spawn(serve_dir());
     // dbg!(&config);
 
     let mut broker = Broker::new(config);
@@ -57,16 +60,10 @@ fn main() {
 
         match notification {
             Notification::Forward(forward) => {
-                let message: DeviceMessage =
-                    serde_json::from_slice(&forward.publish.payload).unwrap();
-                match message {
-                    DeviceMessage::ToCloud(v) => {
-                        wtr.serialize(&v).unwrap();
-                        wtr.flush().unwrap();
-                        println!("Topic = {:?}, Payload = {:?}", forward.publish.topic, v);
-                    }
-                    _ => {}
-                };
+                let v: DeviceState = serde_json::from_slice(&forward.publish.payload).unwrap();
+                wtr.serialize(&v).unwrap();
+                wtr.flush().unwrap();
+                println!("Topic = {:?}, Payload = {:?}", forward.publish.topic, v);
             }
             v => {
                 println!("{v:?}");
