@@ -9,27 +9,16 @@ pub struct ChargerState {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct DigitalInputState {
     pub wifi_en: bool,
-    pub pressure_en: bool,
-    pub charger_en: bool,
     pub high_freq_en: bool
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct I2CADCRead {
-    battery_ma: u16,
+    battery_ma: i16,
     battery_mv: u16,
     esp_vin_mv: u16,
-    buck_out_mv: u16,
+    generator_mv: u16,
     pressure_mv: u16
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
-pub struct IntADCState {
-    pub gpio32: u16,
-    pub gpio34: u16,
-    pub gpio35: u16,
-    pub gpio36: u16,
-    pub gpio39: u16,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, strum::FromRepr)]
@@ -38,7 +27,6 @@ pub enum WiFiState {
     Disabled,
     Connecting,
     Connected,
-    Error,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
@@ -46,7 +34,6 @@ pub struct DeviceState {
     pub charger_state: ChargerState,
     pub digital_state: DigitalInputState,
     pub i2c_adc_state: I2CADCRead,
-    pub int_adc_state: IntADCState,
     pub wifi_state: WiFiState,
     pub n_pulses: u16,
     pub register_time_ms: u64,
@@ -54,9 +41,8 @@ pub struct DeviceState {
 }
 
 use axum::Router;
-use csv::Writer;
 use rumqttd::{Broker, Config, Notification};
-use std::thread;
+use std::{thread, fs::File, io::{Write, Seek}};
 use tower_http::services::ServeDir;
 
 async fn serve_dir() {
@@ -93,7 +79,10 @@ async fn main() {
 
     link_tx.subscribe("#").unwrap();
 
-    let mut wtr = Writer::from_path("./result.csv").unwrap();
+    let mut file = File::create("./result.json").unwrap();
+    file.write("[]".as_bytes()).unwrap();
+    file.seek(std::io::SeekFrom::Start(0)).unwrap();
+    let mut first = true;
 
     loop {
         let notification = match link_rx.recv().unwrap() {
@@ -103,10 +92,24 @@ async fn main() {
 
         match notification {
             Notification::Forward(forward) => {
-                let v: DeviceState = serde_json::from_slice(&forward.publish.payload).unwrap();
-                wtr.serialize(&v).unwrap();
-                wtr.flush().unwrap();
-                println!("Topic = {:?}, Payload = {:?}", forward.publish.topic, v);
+                let payload = forward.publish.payload;
+                let device_state: DeviceState = match serde_json::from_slice(&payload) {
+                    Ok(v) => v,
+                    Err(v) => {
+                        println!("Error while parsing: {v:?}; Payload: {}", core::str::from_utf8(&payload).unwrap());
+                        continue;
+                    }
+                };
+                file.seek(std::io::SeekFrom::End(-1)).unwrap();
+                if first {
+                    first = false;
+                } else {
+                    file.write(",\n".as_bytes()).unwrap();
+                }
+                file.write(&payload).unwrap();
+                file.write("]".as_bytes()).unwrap();
+                file.flush().unwrap();
+                println!("Topic = {:?}, Payload = {:?}", forward.publish.topic, device_state);
             }
             v => {
                 println!("{v:?}");
