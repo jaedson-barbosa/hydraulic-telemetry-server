@@ -1,17 +1,16 @@
 // hostname -I
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
-pub struct I2CADCRead {
+pub struct ADCRead {
     battery_ma: i16,
     battery_mv: u16,
     esp_vin_mv: u16,
-    generator_mv: u16,
-    pressure_mv: u16
+    pressure_mv: u16,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct DeviceState {
-    pub i2c_adc_state: I2CADCRead,
+    pub adc_state: ADCRead,
     pub pwm_pct: u8,
     pub n_pulses: u16,
     pub time_ms: u64,
