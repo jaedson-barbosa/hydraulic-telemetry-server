@@ -1,12 +1,6 @@
 // hostname -I
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
-pub struct ChargerState {
-    pwm_dc: u32,
-    max_dc: u32,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct I2CADCRead {
     battery_ma: i16,
     battery_mv: u16,
@@ -15,24 +9,12 @@ pub struct I2CADCRead {
     pressure_mv: u16
 }
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, strum::FromRepr)]
-#[repr(u8)]
-pub enum WiFiState {
-    Disabled,
-    Connecting,
-    Connected,
-}
-
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct DeviceState {
-    pub charger_state: ChargerState,
-    pub wifi_en: bool,
-    pub high_freq: bool,
     pub i2c_adc_state: I2CADCRead,
-    pub wifi_state: WiFiState,
+    pub pwm_pct: u8,
     pub n_pulses: u16,
-    pub register_time_ms: u64,
-    pub transmission_time_ms: u64
+    pub time_ms: u64,
 }
 
 use axum::Router;
