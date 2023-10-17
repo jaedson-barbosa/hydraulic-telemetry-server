@@ -7,12 +7,6 @@ pub struct ChargerState {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
-pub struct DigitalInputState {
-    pub wifi_en: bool,
-    pub high_freq_en: bool
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct I2CADCRead {
     battery_ma: i16,
     battery_mv: u16,
@@ -32,7 +26,8 @@ pub enum WiFiState {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug)]
 pub struct DeviceState {
     pub charger_state: ChargerState,
-    pub digital_state: DigitalInputState,
+    pub wifi_en: bool,
+    pub high_freq: bool,
     pub i2c_adc_state: I2CADCRead,
     pub wifi_state: WiFiState,
     pub n_pulses: u16,
