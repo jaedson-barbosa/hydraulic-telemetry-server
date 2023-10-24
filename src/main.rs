@@ -2,11 +2,9 @@
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default)]
 pub struct ADCRead {
-    battery_ma: i16,
-    battery_mv: u16,
-    ldo_inp_mv: u16,
-    esp_vin_mv: u16,
-    pressure_mv: u16,
+    pub battery_mv: u16,
+    pub ldo_inp_mv: u16,
+    pub pressure_mv: u16,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default)]
@@ -14,12 +12,6 @@ pub struct DeviceState {
     pub adc_state: ADCRead,
     pub n_pulses: u16,
     pub time_sec: u64
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Default)]
-pub struct DeviceStateBatch {
-    data: [DeviceState; 10],
-    time_sec: u64,
 }
 
 use axum::Router;
@@ -75,12 +67,9 @@ async fn main() {
         match notification {
             Notification::Forward(forward) => {
                 let payload = forward.publish.payload;
-                let device_state: DeviceStateBatch = match serde_json::from_slice(&payload) {
+                let device_state: DeviceState = match serde_json::from_slice(&payload) {
                     Ok(v) => v,
-                    Err(v) => {
-                        println!("Error while parsing: {v:?}; Payload: {}", core::str::from_utf8(&payload).unwrap());
-                        continue;
-                    }
+                    Err(_) => continue
                 };
                 file.seek(std::io::SeekFrom::End(-1)).unwrap();
                 if first {
